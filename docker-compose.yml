@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: wattbox-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - uploads:/app/static/uploads
+    environment:
+      - DATABASE_URL=postgresql://wattbox:wattbox123@db/wattbox
+      - UPLOAD_DIRECTORY=/app/static/uploads
+      - TESSERACT_PATH=/usr/bin/tesseract
+      - PRICE_PER_KWH=0.42
+      - ALLOWED_DEVICE_IDS=esp1,esp2,esp3
+      - CORS_ORIGINS=http://localhost,http://localhost:3000,http://localhost:8080
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: wattbox-frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost/api
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: wattbox-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=wattbox
+      - POSTGRES_PASSWORD=wattbox123
+      - POSTGRES_DB=wattbox
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads:
