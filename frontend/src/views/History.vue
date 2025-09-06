@@ -9,40 +9,35 @@
       </CardHeader>
       <CardContent>
         <div class="grid gap-4 md:grid-cols-3">
-          <FormItem>
-            <FormLabel>Device</FormLabel>
-            <Select v-model="filters.deviceId">
-              <SelectTrigger>
-                <SelectValue placeholder="All Devices" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Devices</SelectItem>
-                <SelectItem v-for="device in devices" :key="device.id" :value="device.id">
-                  {{ device.name || device.id }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </FormItem>
+          <div class="space-y-2">
+            <Label for="device-select">Device</Label>
+            <select 
+              id="device-select"
+              v-model="filters.deviceId"
+              class="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">All Devices</option>
+              <option v-for="device in devices" :key="device.id" :value="device.id">
+                {{ device.name || device.id }}
+              </option>
+            </select>
+          </div>
           
-          <FormItem>
-            <FormLabel>Start Date</FormLabel>
-            <FormControl>
-              <Input
-                v-model="filters.startDate"
-                type="date"
-              />
-            </FormControl>
-          </FormItem>
+          <div class="space-y-2">
+            <Label>Start Date</Label>
+            <Input
+              v-model="filters.startDate"
+              type="date"
+            />
+          </div>
           
-          <FormItem>
-            <FormLabel>End Date</FormLabel>
-            <FormControl>
-              <Input
-                v-model="filters.endDate"
-                type="date"
-              />
-            </FormControl>
-          </FormItem>
+          <div class="space-y-2">
+            <Label>End Date</Label>
+            <Input
+              v-model="filters.endDate"
+              type="date"
+            />
+          </div>
         </div>
         
         <div class="mt-4 flex gap-2">
@@ -214,9 +209,8 @@ import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FormControl, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
@@ -244,7 +238,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const readings = ref<Reading[]>([])
 const devices = ref<Device[]>([])
 const selectedReading = ref<Reading | null>(null)
-const isLoading = ref(false)
+const isLoading = ref(true) // Start with true since we'll immediately fetch data on mount
 const totalReadings = ref(0)
 const currentPage = ref(1)
 const pageSize = 20
@@ -269,6 +263,17 @@ const getConfidenceVariant = (confidence: number) => {
 
 const fetchReadings = async () => {
   isLoading.value = true
+  
+  // Set a timeout to ensure loading state doesn't get stuck
+  const loadingTimeout = setTimeout(() => {
+    if (isLoading.value) {
+      console.warn('Loading timeout reached, forcing loading state to false')
+      isLoading.value = false
+      readings.value = []
+      totalReadings.value = 0
+    }
+  }, 12000) // 12 second timeout (slightly longer than axios timeout)
+  
   try {
     const params: any = {
       skip: (currentPage.value - 1) * pageSize,
@@ -285,12 +290,19 @@ const fetchReadings = async () => {
       params.end_date = new Date(filters.value.endDate).toISOString()
     }
     
+    console.log('Fetching readings with params:', params)
     const response = await api.get('/readings', { params })
-    readings.value = response.data.readings
-    totalReadings.value = response.data.total
+    console.log('Readings response:', response.data)
+    
+    readings.value = response.data.readings || []
+    totalReadings.value = response.data.total || 0
   } catch (error) {
     console.error('Error fetching readings:', error)
+    // Ensure we clear the loading state and show empty state on error
+    readings.value = []
+    totalReadings.value = 0
   } finally {
+    clearTimeout(loadingTimeout)
     isLoading.value = false
   }
 }
@@ -328,8 +340,17 @@ const selectReading = (reading: Reading) => {
   selectedReading.value = reading
 }
 
-onMounted(() => {
-  fetchReadings()
-  fetchDevices()
+onMounted(async () => {
+  console.log('History component mounted, fetching data...')
+  try {
+    await Promise.all([
+      fetchReadings(),
+      fetchDevices()
+    ])
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+    // Ensure loading state is cleared even if there's an error
+    isLoading.value = false
+  }
 })
 </script>

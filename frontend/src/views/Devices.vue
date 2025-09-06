@@ -135,36 +135,32 @@
         </CardHeader>
         <CardContent>
           <form @submit.prevent="addDevice" class="space-y-4">
-            <FormItem>
-              <FormLabel for="device-id">Device ID</FormLabel>
-              <FormControl>
-                <Input
-                  id="device-id"
-                  v-model="newDevice.id"
-                  type="text"
-                  required
-                  placeholder="esp1"
-                />
-              </FormControl>
-              <FormDescription>
+            <div class="space-y-2">
+              <Label for="device-id">Device ID</Label>
+              <Input
+                id="device-id"
+                v-model="newDevice.id"
+                type="text"
+                required
+                placeholder="esp1"
+              />
+              <p class="text-sm text-muted-foreground">
                 Unique identifier for the device
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
-            <FormItem>
-              <FormLabel for="device-name">Device Name (optional)</FormLabel>
-              <FormControl>
-                <Input
-                  id="device-name"
-                  v-model="newDevice.name"
-                  type="text"
-                  placeholder="Living Room Meter"
-                />
-              </FormControl>
-              <FormDescription>
+            <div class="space-y-2">
+              <Label for="device-name">Device Name (optional)</Label>
+              <Input
+                id="device-name"
+                v-model="newDevice.name"
+                type="text"
+                placeholder="Living Room Meter"
+              />
+              <p class="text-sm text-muted-foreground">
                 A friendly name for the device
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             <div class="flex gap-2">
               <Button type="submit" :disabled="!newDevice.id || isAddingDevice">
@@ -185,8 +181,8 @@ import { ref, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FormControl, FormDescription, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'

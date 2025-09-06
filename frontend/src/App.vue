@@ -1,5 +1,8 @@
 <template>
   <div class="min-h-screen bg-white dark:bg-zinc-900">
+    <!-- Toast notifications -->
+    <Toaster />
+    
     <!-- Navigation Header -->
     <header class="border-b">
       <div class="container mx-auto px-6 py-4">
@@ -103,10 +106,7 @@
 
     <!-- Main Content -->
     <main>
-      <RouterView v-slot="{ Component }">
-        <component :is="Component" v-if="Component" />
-        <div v-else>Loading...</div>
-      </RouterView>
+      <RouterView :key="$route.fullPath" />
     </main>
   </div>
 </template>
@@ -114,6 +114,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { Toaster } from '@/components/ui/toast'
+import 'vue-sonner/style.css'
 
 const mobileMenuOpen = ref(false)
 const route = useRoute()

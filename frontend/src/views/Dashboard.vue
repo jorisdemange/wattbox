@@ -215,6 +215,7 @@ const formatDate = (dateString: string) => {
 }
 
 const fetchData = async () => {
+  console.log('Fetching dashboard data...')
   try {
     isLoading.value = true
     
@@ -245,9 +246,10 @@ const fetchData = async () => {
     // Fetch devices
     try {
       const devicesResponse = await api.get('/devices')
-      devices.value = devicesResponse.data.devices
+      devices.value = devicesResponse.data.devices || []
     } catch (error) {
       console.log('No devices found')
+      devices.value = [] // Ensure empty array on error
     }
 
     // Fetch readings for chart
@@ -255,9 +257,10 @@ const fetchData = async () => {
       const readingsResponse = await api.get('/readings', {
         params: { limit: 100 }
       })
-      readings.value = readingsResponse.data.readings.reverse()
+      readings.value = readingsResponse.data.readings?.reverse() || []
     } catch (error) {
       console.log('No readings found')
+      readings.value = [] // Ensure empty array on error
     }
   } catch (error) {
     console.error('Error fetching dashboard data:', error)

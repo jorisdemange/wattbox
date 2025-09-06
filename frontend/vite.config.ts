@@ -17,4 +17,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: false,
+    allowedHosts: ['host.docker.internal', 'localhost', '127.0.0.1', '.docker.internal']
+  }
 })
