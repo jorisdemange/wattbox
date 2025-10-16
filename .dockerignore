@@ -9,6 +9,7 @@ __pycache__
 *.pyd
 .Python
 venv/
+backend/venv/
 env/
 ENV/
 .venv
@@ -37,7 +38,7 @@ frontend/.env
 wattbox.db
 
 # Uploads
-backend/static/uploads/*
+backend/static/
 data/
 
 # Documentation
