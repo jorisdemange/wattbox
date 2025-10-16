@@ -9,7 +9,7 @@ import os
 from config import get_settings
 from db.database import engine
 from db.models import Base
-from api import upload, readings, devices
+from api import upload, readings, devices, esp32_upload, ocr_test
 
 # Configure logging
 settings = get_settings()
@@ -58,6 +58,8 @@ app.add_middleware(
 app.include_router(upload.router)
 app.include_router(readings.router)
 app.include_router(devices.router)
+app.include_router(esp32_upload.router)
+app.include_router(ocr_test.router)  # OCR testing API (no database required)
 
 # Serve static files (images)
 app.mount("/images", StaticFiles(directory=settings.UPLOAD_DIRECTORY), name="images")
@@ -73,6 +75,7 @@ async def root():
             "upload": "/upload",
             "readings": "/readings",
             "devices": "/devices",
+            "ocr_testing": "/ocr",
             "docs": "/docs"
         }
     }

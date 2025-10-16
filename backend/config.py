@@ -15,7 +15,11 @@ class Settings(BaseSettings):
     
     # OCR
     TESSERACT_PATH: Optional[str] = None
-    
+    OCR_DEFAULT_STRATEGY: str = "auto"  # auto, basic, advanced, seven_segment, simple
+    OCR_CONFIDENCE_THRESHOLD: float = 50.0  # Minimum confidence for accepting results
+    OCR_ENABLE_FALLBACK: bool = True  # Enable fallback to other strategies
+    OCR_DEBUG_MODE: bool = False  # Save preprocessed images for debugging
+
     # Pricing
     PRICE_PER_KWH: float = 0.42
     

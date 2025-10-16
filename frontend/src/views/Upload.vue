@@ -10,10 +10,10 @@
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div class="space-y-4">
           <!-- File Upload -->
           <div class="space-y-2">
-            <Label>Meter Photo</Label>
+            <Label>Meter Photo (optional)</Label>
             <div
               @drop="handleDrop"
               @dragover.prevent
@@ -70,33 +70,103 @@
             <img :src="imagePreview" alt="Preview" class="max-w-full h-64 object-contain rounded-lg" />
           </div>
 
+          <!-- Date/Time Selection -->
+          <div class="space-y-2">
+            <Label>Reading Date & Time</Label>
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button
+                  type="button"
+                  variant="outline"
+                  :class="[
+                    'w-full justify-start text-left font-normal',
+                    !readingDateTime && 'text-muted-foreground'
+                  ]"
+                  :disabled="isUploading"
+                >
+                  <CalendarIcon class="mr-2 h-4 w-4" />
+                  <span v-if="readingDateTime">{{ formatDateTime(readingDateTime) }}</span>
+                  <span v-else>Pick a date and time</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="w-auto p-0" align="start">
+                <Calendar
+                  v-model="selectedDate"
+                  mode="single"
+                  :initial-focus="true"
+                />
+                <div class="p-3 border-t">
+                  <Label class="text-xs text-muted-foreground">Time</Label>
+                  <div class="flex gap-2 mt-2">
+                    <Input
+                      v-model="selectedHour"
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      class="w-16 text-center"
+                    />
+                    <span class="flex items-center">:</span>
+                    <Input
+                      v-model="selectedMinute"
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      class="w-16 text-center"
+                    />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <p class="text-sm text-muted-foreground">
+              Set the date and time for this reading (defaults to now)
+            </p>
+          </div>
+
           <!-- Manual Reading Input -->
           <div class="space-y-2">
-            <Label for="manual-reading">Manual Reading (optional)</Label>
+            <Label for="manual-reading">Manual Reading (kWh)</Label>
             <Input
               id="manual-reading"
               v-model="manualReading"
               type="number"
               step="0.01"
-              placeholder="Enter reading if OCR fails"
+              placeholder="Enter meter reading in kWh"
               :disabled="isUploading"
             />
             <p class="text-sm text-muted-foreground">
-              Leave empty to use automatic OCR detection
+              Enter manually or let OCR auto-detect from photo. At least one is required.
+            </p>
+          </div>
+
+          <!-- Notes Input -->
+          <div class="space-y-2">
+            <Label for="notes">Notes (optional)</Label>
+            <Textarea
+              id="notes"
+              v-model="notes"
+              placeholder="Add any observations about this reading..."
+              :disabled="isUploading"
+              class="min-h-[80px] resize-y"
+            />
+            <p class="text-sm text-muted-foreground">
+              Record any observations or context for this reading
             </p>
           </div>
 
           <!-- Submit Button -->
           <Button
-            type="submit"
+            type="button"
             class="w-full"
-            :disabled="!selectedFile || isUploading"
+            :disabled="(!selectedFile && !manualReading) || isUploading"
+            @click="handleSubmit"
           >
             <Loader2 v-if="isUploading" class="mr-2 h-4 w-4 animate-spin" />
             <span v-if="isUploading">Uploading... {{ uploadProgress }}%</span>
-            <span v-else>Upload Reading</span>
+            <span v-else>Submit Reading</span>
           </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
 
@@ -139,18 +209,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { api } from '@/lib/api'
-import { Loader2, CheckCircle2, XCircle, Upload } from 'lucide-vue-next'
+import { Loader2, CheckCircle2, XCircle, Upload, CalendarIcon } from 'lucide-vue-next'
 import { toast } from '@/components/ui/toast'
+import type { DateValue } from '@internationalized/date'
+import { CalendarDate, toCalendarDate, getLocalTimeZone, today } from '@internationalized/date'
 
 interface UploadResult {
   success: boolean
@@ -163,16 +238,56 @@ interface UploadResult {
 const fileInput = ref<HTMLInputElement>()
 const selectedFile = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
+const selectedDate = ref<DateValue>()
+const selectedHour = ref<string>('')
+const selectedMinute = ref<string>('')
 const manualReading = ref<string>('')
+const notes = ref<string>('')
 const isUploading = ref(false)
 const uploadProgress = ref(0)
 const uploadResult = ref<UploadResult | null>(null)
+
+// Initialize with current date and time
+const initializeDateTime = () => {
+  const now = new Date()
+  selectedDate.value = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate())
+  selectedHour.value = now.getHours().toString().padStart(2, '0')
+  selectedMinute.value = now.getMinutes().toString().padStart(2, '0')
+}
+
+// Initialize on mount
+initializeDateTime()
+
+// Computed property for the combined date/time
+const readingDateTime = computed(() => {
+  if (selectedDate.value) {
+    const hour = selectedHour.value ? parseInt(selectedHour.value) : 0
+    const minute = selectedMinute.value ? parseInt(selectedMinute.value) : 0
+    // Convert DateValue to JavaScript Date
+    const date = new Date(selectedDate.value.year, selectedDate.value.month - 1, selectedDate.value.day, hour, minute)
+    return date
+  }
+  return null
+})
 
 const formatFileSize = (bytes: number) => {
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   if (bytes === 0) return '0 Bytes'
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+const formatDateTime = (date: Date | null) => {
+  if (!date) return ''
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Istanbul' // GMT+3
+  }
+  return date.toLocaleString('en-US', options)
 }
 
 const handleFileSelect = (event: Event) => {
@@ -254,40 +369,58 @@ const handleSubmit = async () => {
   console.log('Submit button clicked')
   console.log('Selected file:', selectedFile.value)
   console.log('Manual reading:', manualReading.value)
-  
-  if (!selectedFile.value) {
-    console.log('No file selected, returning')
+
+  // Validate that either file or manual reading is provided
+  if (!selectedFile.value && !manualReading.value) {
     uploadResult.value = {
       success: false,
-      error: 'Please select an image file to upload'
+      error: 'Please provide either a photo or enter a manual reading'
     }
-    toast.error('No file selected', {
-      description: 'Please select an image file to upload',
+    toast.error('Missing input', {
+      description: 'Please provide either a photo or enter a manual reading',
     })
     return
   }
-  
+
+  // Validate manual reading if provided
+  if (manualReading.value) {
+    const reading = parseFloat(manualReading.value)
+    if (isNaN(reading) || reading < 0) {
+      uploadResult.value = {
+        success: false,
+        error: 'Manual reading must be a positive number'
+      }
+      toast.error('Invalid reading', {
+        description: 'Manual reading must be a positive number',
+      })
+      return
+    }
+  }
+
   isUploading.value = true
   uploadResult.value = null
   uploadProgress.value = 0
-  
+
   try {
     const formData = new FormData()
-    formData.append('file', selectedFile.value)
-    
+
+    // Add file if provided
+    if (selectedFile.value) {
+      formData.append('file', selectedFile.value)
+    }
+
+    // Add timestamp (always use current if set)
+    if (readingDateTime.value) {
+      formData.append('timestamp', readingDateTime.value.toISOString())
+    }
+
+    // Add notes if provided
+    if (notes.value && notes.value.trim()) {
+      formData.append('notes', notes.value.trim())
+    }
+
+    // Add manual reading if provided
     if (manualReading.value) {
-      const reading = parseFloat(manualReading.value)
-      if (isNaN(reading) || reading < 0) {
-        uploadResult.value = {
-          success: false,
-          error: 'Manual reading must be a positive number'
-        }
-        toast.error('Invalid reading', {
-          description: 'Manual reading must be a positive number',
-        })
-        isUploading.value = false
-        return
-      }
       formData.append('reading_kwh', manualReading.value)
     }
     
@@ -310,14 +443,22 @@ const handleSubmit = async () => {
     })
     
     console.log('Upload response:', response.data)
-    
+
+    // If OCR was successful and no manual reading was provided, fill it in
+    if (response.data.reading_kwh && !manualReading.value) {
+      manualReading.value = response.data.reading_kwh.toString()
+      toast.info('OCR Reading Detected', {
+        description: `Auto-filled reading: ${response.data.reading_kwh} kWh (${response.data.ocr_confidence?.toFixed(1)}% confidence)`,
+      })
+    }
+
     uploadResult.value = {
       success: true,
       reading_kwh: response.data.reading_kwh,
       ocr_confidence: response.data.ocr_confidence,
       cost: response.data.cost
     }
-    
+
     // Show success toast
     toast.success('Upload successful!', {
       description: `Reading: ${response.data.reading_kwh} kWh • Cost: €${response.data.cost.toFixed(2)}`,
@@ -326,7 +467,11 @@ const handleSubmit = async () => {
     // Clear form after a delay
     setTimeout(() => {
       removeFile()
+      selectedDate.value = undefined
+      selectedHour.value = ''
+      selectedMinute.value = ''
       manualReading.value = ''
+      notes.value = ''
       uploadProgress.value = 0
     }, 2000)
   } catch (error: any) {

@@ -190,15 +190,37 @@ async def get_reading(
     db: Session = Depends(get_db)
 ):
     """Get a specific reading by ID"""
-    
+
     reading = db.query(crud.models.Reading).filter(
         crud.models.Reading.id == reading_id
     ).first()
-    
+
     if not reading:
         raise HTTPException(
             status_code=404,
             detail="Reading not found"
         )
-    
+
     return reading
+
+@router.delete("/{reading_id}")
+async def delete_reading(
+    reading_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a specific reading by ID"""
+
+    reading = db.query(crud.models.Reading).filter(
+        crud.models.Reading.id == reading_id
+    ).first()
+
+    if not reading:
+        raise HTTPException(
+            status_code=404,
+            detail="Reading not found"
+        )
+
+    db.delete(reading)
+    db.commit()
+
+    return {"message": "Reading deleted successfully", "id": reading_id}

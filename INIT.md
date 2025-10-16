@@ -198,7 +198,6 @@ This spec defines a flexible, modern, self-hostable full stack web application c
 
 ## ✅ Next Steps
 
-- Code generation via Claude (backend + frontend separately)
 - Start with local SQLite and file storage
 - Once stable, move backend to AWS or RPi
 - Connect ESP32 to `/upload/device`

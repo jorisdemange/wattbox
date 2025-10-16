@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from datetime import datetime
 from typing import Optional
 from enum import Enum
@@ -15,6 +15,7 @@ class ReadingBase(BaseModel):
     ocr_confidence: Optional[float] = Field(None, ge=0, le=100)
     price_per_kwh: float = Field(..., gt=0)
     manual_override: bool = False
+    notes: Optional[str] = None
 
 class ReadingCreate(ReadingBase):
     timestamp: Optional[datetime] = None
@@ -32,8 +33,12 @@ class ReadingResponse(ReadingBase):
     photo_path: str
     processed_photo_path: Optional[str] = None
     created_at: datetime
-    cost: float
-    
+
+    @computed_field
+    @property
+    def cost(self) -> float:
+        return round(self.reading_kwh * self.price_per_kwh, 2)
+
     class Config:
         from_attributes = True
 

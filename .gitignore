@@ -79,3 +79,23 @@ backend/.pytest_cache/
 # OS files
 Thumbs.db
 Desktop.ini
+
+# Claude Code / AI Tools
+.claude/
+.mcp.json
+
+# Test data and examples
+data/
+backend/templates/
+backend/templates_multi/
+
+# ML Models
+*.pt
+*.pth
+*.onnx
+*.h5
+*.keras
+
+# PlatformIO (ESP32 builds)
+embedded/esp32-cam/.pio/
+embedded/esp32-cam/.vscode/
