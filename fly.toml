@@ -1,0 +1,50 @@
+# Fly.io configuration for WattBox
+
+app = "wattbox-production"
+primary_region = "cdg"  # Paris - change if you prefer another region
+
+[build]
+  dockerfile = "Dockerfile.fly"
+
+[env]
+  # Database (SQLite stored in mounted volume)
+  DATABASE_URL = "sqlite:////data/wattbox.db"
+
+  # Storage
+  UPLOAD_DIRECTORY = "/data/uploads"
+
+  # OCR
+  TESSERACT_PATH = "/usr/bin/tesseract"
+  OCR_DEFAULT_STRATEGY = "auto"
+
+  # Pricing
+  PRICE_PER_KWH = "0.42"
+
+  # API
+  API_HOST = "0.0.0.0"
+  API_PORT = "8000"
+  LOG_LEVEL = "INFO"
+
+  # Rate limiting
+  RATE_LIMIT_PER_MINUTE = "10"
+
+# These should be set via `fly secrets set` command (not in this file!)
+# ALLOWED_DEVICE_IDS
+# CORS_ORIGINS
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0  # Scale to zero when idle (FREE!)
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+# Persistent volume for database and images
+[mounts]
+  source = "wattbox_data"
+  destination = "/data"

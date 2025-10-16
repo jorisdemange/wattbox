@@ -1,0 +1,103 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+.venv
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+npm-debug.log*
+frontend/dist/
+frontend/.vite/
+
+# Environment
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+wattbox.db
+
+# Uploads
+backend/static/uploads/*
+data/
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Tests
+tests/
+*.test.js
+*.spec.js
+test_*.py
+*_test.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+docker-compose*.yml
+Dockerfile
+!Dockerfile.fly
+
+# Logs
+*.log
+logs/
+
+# Temporary
+*.tmp
+*.temp
+.cache/
+
+# Examples and test data
+data/examples/
+backend/templates/
+backend/templates_multi/
+
+# Scripts
+*.sh
+backend/test_*.py
+backend/debug_*.py
+backend/analyze_*.py
+backend/calibrate_*.py
+backend/compare_*.py
+backend/create_*.py
+backend/extract_*.py
+backend/find_*.py
+backend/manual_*.py
+backend/quick_*.py
+backend/visual_*.py
+
+# Project files
+.mcp.json
+PROJECT_*.md
+OCR_*.md
+METER_*.md
+ESP32_*.md
+FINAL_*.md
+LCD_*.md
+TEST_*.md
