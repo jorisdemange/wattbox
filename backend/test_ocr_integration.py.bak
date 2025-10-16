@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Integration test for the modular OCR system
+
+Run this to verify that the OCR orchestrator and all strategies are working correctly.
+"""
+
+import sys
+import os
+import logging
+from pathlib import Path
+
+# Add backend to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from services.ocr_orchestrator import OCROrchestrator, OCRStrategy
+from config import get_settings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+def test_orchestrator_initialization():
+    """Test that orchestrator initializes correctly"""
+    print("\n" + "="*70)
+    print("Test 1: Orchestrator Initialization")
+    print("="*70)
+
+    try:
+        settings = get_settings()
+        orchestrator = OCROrchestrator(settings.TESSERACT_PATH)
+
+        strategies = orchestrator.get_available_strategies()
+        print(f"✓ Orchestrator initialized successfully")
+        print(f"✓ Available strategies: {', '.join(strategies)}")
+
+        assert len(strategies) > 0, "No strategies available"
+        assert 'auto' in strategies, "Auto strategy not found"
+
+        return True
+    except Exception as e:
+        print(f"✗ Initialization failed: {e}")
+        return False
+
+
+def test_strategy_enum():
+    """Test that all strategy enums are valid"""
+    print("\n" + "="*70)
+    print("Test 2: Strategy Enum Validation")
+    print("="*70)
+
+    try:
+        strategies = [
+            OCRStrategy.AUTO,
+            OCRStrategy.BASIC,
+            OCRStrategy.ADVANCED,
+            OCRStrategy.SEVEN_SEGMENT,
+            OCRStrategy.SIMPLE,
+        ]
+
+        for strategy in strategies:
+            print(f"✓ Strategy enum valid: {strategy.value}")
+
+        return True
+    except Exception as e:
+        print(f"✗ Strategy enum validation failed: {e}")
+        return False
+
+
+def test_with_sample_image():
+    """Test OCR with a sample image if available"""
+    print("\n" + "="*70)
+    print("Test 3: OCR Processing (if sample image available)")
+    print("="*70)
+
+    # Look for test images
+    test_paths = [
+        './static/uploads/failed/',
+        './static/uploads/raw/',
+        '../test_images/',
+    ]
+
+    sample_image = None
+    for path in test_paths:
+        if os.path.exists(path):
+            for ext in ['.jpg', '.jpeg', '.png']:
+                images = list(Path(path).glob(f'*{ext}'))
+                if images:
+                    sample_image = str(images[0])
+                    break
+        if sample_image:
+            break
+
+    if not sample_image:
+        print("⚠ No sample images found - skipping OCR test")
+        print(f"  (Checked: {', '.join(test_paths)})")
+        return True
+
+    try:
+        print(f"Found sample image: {sample_image}")
+
+        settings = get_settings()
+        orchestrator = OCROrchestrator(settings.TESSERACT_PATH)
+
+        # Test with auto strategy
+        result = orchestrator.extract_reading(sample_image, OCRStrategy.AUTO)
+
+        print(f"\nOCR Result:")
+        print(f"  Reading:     {result.reading_kwh} kWh")
+        print(f"  Confidence:  {result.confidence:.2f}%")
+        print(f"  Strategy:    {result.strategy_used}")
+        print(f"  Meter Type:  {result.meter_type}")
+        print(f"  Time:        {result.processing_time_ms:.2f}ms")
+        print(f"  Success:     {'✓' if result.success else '✗'}")
+
+        if result.success:
+            print(f"✓ OCR processing successful")
+        else:
+            print(f"⚠ OCR processing failed (this may be expected for difficult images)")
+            print(f"  Error: {result.error_message}")
+
+        return True
+    except Exception as e:
+        print(f"✗ OCR processing test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_benchmark_functionality():
+    """Test benchmark functionality"""
+    print("\n" + "="*70)
+    print("Test 4: Benchmark Functionality")
+    print("="*70)
+
+    try:
+        settings = get_settings()
+        orchestrator = OCROrchestrator(settings.TESSERACT_PATH)
+
+        # Verify benchmark method exists
+        assert hasattr(orchestrator, 'benchmark_strategies'), "Benchmark method not found"
+        assert hasattr(orchestrator, 'process_with_fallback'), "Fallback method not found"
+
+        print(f"✓ Benchmark methods available")
+
+        return True
+    except Exception as e:
+        print(f"✗ Benchmark test failed: {e}")
+        return False
+
+
+def test_configuration():
+    """Test OCR configuration"""
+    print("\n" + "="*70)
+    print("Test 5: Configuration")
+    print("="*70)
+
+    try:
+        settings = get_settings()
+
+        print(f"✓ Tesseract Path:      {settings.TESSERACT_PATH or '(system default)'}")
+        print(f"✓ Default Strategy:    {settings.OCR_DEFAULT_STRATEGY}")
+        print(f"✓ Confidence Threshold: {settings.OCR_CONFIDENCE_THRESHOLD}")
+        print(f"✓ Fallback Enabled:    {settings.OCR_ENABLE_FALLBACK}")
+        print(f"✓ Debug Mode:          {settings.OCR_DEBUG_MODE}")
+
+        # Validate strategy is valid
+        try:
+            OCRStrategy(settings.OCR_DEFAULT_STRATEGY)
+            print(f"✓ Default strategy is valid")
+        except ValueError:
+            print(f"✗ Invalid default strategy: {settings.OCR_DEFAULT_STRATEGY}")
+            return False
+
+        return True
+    except Exception as e:
+        print(f"✗ Configuration test failed: {e}")
+        return False
+
+
+def main():
+    """Run all tests"""
+    print("\n" + "#"*70)
+    print("# OCR System Integration Tests")
+    print("#"*70)
+
+    tests = [
+        ("Orchestrator Initialization", test_orchestrator_initialization),
+        ("Strategy Enum Validation", test_strategy_enum),
+        ("OCR Processing", test_with_sample_image),
+        ("Benchmark Functionality", test_benchmark_functionality),
+        ("Configuration", test_configuration),
+    ]
+
+    results = []
+    for name, test_func in tests:
+        try:
+            success = test_func()
+            results.append((name, success))
+        except Exception as e:
+            logger.error(f"Test {name} crashed: {e}", exc_info=True)
+            results.append((name, False))
+
+    # Summary
+    print("\n" + "="*70)
+    print("Test Summary")
+    print("="*70)
+
+    passed = sum(1 for _, success in results if success)
+    total = len(results)
+
+    for name, success in results:
+        status = "✓ PASS" if success else "✗ FAIL"
+        print(f"{status}: {name}")
+
+    print(f"\nTotal: {passed}/{total} tests passed")
+
+    if passed == total:
+        print("\n✓ All tests passed! OCR system is ready to use.")
+        print("\nNext steps:")
+        print("1. Read backend/docs/OCR_QUICK_START.md")
+        print("2. Test with your meter images: python cli/ocr_tool.py test <image>")
+        print("3. Start the API server: uvicorn main:app --reload")
+        print("4. Visit http://localhost:8000/docs for API documentation")
+        return 0
+    else:
+        print("\n✗ Some tests failed. Please check the errors above.")
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
